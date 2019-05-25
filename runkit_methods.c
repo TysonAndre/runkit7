@@ -18,6 +18,8 @@
 */
 
 #include "runkit.h"
+// For ZEND_ACC_ALLOW_STATIC
+#include "Zend/zend_compile.h"
 
 #ifdef PHP_RUNKIT_MANIPULATION
 
@@ -408,7 +410,10 @@ static void php_runkit_method_add_or_update(INTERNAL_FUNCTION_PARAMETERS, int ad
 	if (flags & ZEND_ACC_STATIC) {
 		func->common.fn_flags |= ZEND_ACC_STATIC;
 	} else {
+#ifdef ZEND_ACC_ALLOW_STATIC
+		// ZEND_ACC_ALLOW_STATIC was removed in php 8.0-dev
 		func->common.fn_flags |= ZEND_ACC_ALLOW_STATIC;
+#endif ZEND_ACC_ALLOW_STATIC
 	}
 
 	if (doc_comment == NULL && source_fe->op_array.doc_comment == NULL &&

@@ -606,7 +606,7 @@ PHP_FUNCTION(runkit7_import)
 			// TODO: Check if this is the same in php 7.0
             if (pce != NULL) {
 #if PHP_VERSION_ID >= 70400
-                do_bind_inherited_class(key, pce);
+                do_bind_class(key, pce);
 #else
                 do_bind_inherited_class(new_op_array, &new_op_array->opcodes[opline_num], tmp_class_table, pce, 0);
 #endif

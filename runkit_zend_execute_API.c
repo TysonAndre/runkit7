@@ -31,6 +31,10 @@ int runkit_forward_call_user_function(zend_function *fbc, zend_function *fbc_inn
 	zend_execute_data *call, dummy_execute_data;
 	zend_fcall_info_cache fci_cache_local = {0};
 	zend_function *func;
+#if PHP_VERSION_ID >= 70400
+	uint32_t call_info;
+	void *object_or_called_scope;
+#endif
 	/* {{{ patch for runkit */
 	zend_fcall_info fci = {0};
 	zend_fcall_info_cache *fci_cache = NULL;
@@ -110,11 +114,25 @@ int runkit_forward_call_user_function(zend_function *fbc, zend_function *fbc_inn
 	}
 
 	func = fbc_inner;
+
+#if PHP_VERSION_ID < 70400
     fci.object = (func->common.fn_flags & ZEND_ACC_STATIC) ?
 	   NULL : fci_cache->object;
-
     call = zend_vm_stack_push_call_frame(ZEND_CALL_TOP_FUNCTION | ZEND_CALL_DYNAMIC,
 	   func, fci.param_count, fci_cache->called_scope, fci.object);
+#else
+    if ((func->common.fn_flags & ZEND_ACC_STATIC) || !fci_cache->object) {
+		fci.object = NULL;
+		object_or_called_scope = fci_cache->called_scope;
+		call_info = ZEND_CALL_TOP_FUNCTION | ZEND_CALL_DYNAMIC;
+	} else {
+		fci.object = fci_cache->object;
+		object_or_called_scope = fci.object;
+		call_info = ZEND_CALL_TOP_FUNCTION | ZEND_CALL_DYNAMIC | ZEND_CALL_HAS_THIS;
+	}
+    call = zend_vm_stack_push_call_frame(call_info,
+	   func, fci.param_count, object_or_called_scope);
+#endif
 	if (fci.object &&
 	    (!EG(objects_store).object_buckets ||
 	     !IS_OBJ_VALID(EG(objects_store).object_buckets[fci.object->handle]))) {
@@ -215,6 +233,7 @@ int runkit_forward_call_user_function(zend_function *fbc, zend_function *fbc_inn
 			RUNKIT_CLEAR_FCI_CACHE(fci_cache);
 		}
 	} else { /* ZEND_OVERLOADED_FUNCTION */
+#if PHP_VERSION_ID < 70400
 		ZVAL_NULL(fci.retval);
 
 		/* Not sure what should be done here if it's a static method */
@@ -238,6 +257,10 @@ int runkit_forward_call_user_function(zend_function *fbc, zend_function *fbc_inn
 			zval_ptr_dtor(fci.retval);
 			ZVAL_UNDEF(fci.retval);
 		}
+#else
+		// php 7.4 got rid of ZEND_OVERLOADED_FUNCTION
+		ZEND_ASSERT(func->type == ZEND_INTERNAL_FUNCTION);
+#endif
 	}
 
 	zend_vm_stack_free_call_frame(call);
