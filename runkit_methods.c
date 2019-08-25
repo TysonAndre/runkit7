@@ -59,6 +59,7 @@ zend_class_entry *php_runkit_fetch_class(zend_string *classname)
 {
 	zend_class_entry *ce;
 
+	// FIXME why is this creating a string that later gets used in zend_std_cast_object_tostring
 	if ((ce = php_runkit_fetch_class_int(classname)) == NULL) {
 		return NULL;
 	}
@@ -406,6 +407,11 @@ static void php_runkit_method_add_or_update(INTERNAL_FUNCTION_PARAMETERS, int ad
 		func->common.fn_flags &= ~ZEND_ACC_PPP_MASK;
 		func->common.fn_flags |= ZEND_ACC_PUBLIC;
 	}
+	// Note: If this user-defined function was from a closure,
+	// we mark it as not being a closure.
+	// This is done to avoid trying to manipulate the zend_function like a closure,
+	// e.g. by increasing its reference count (closures do, functions/methods don't).
+	func->common.fn_flags &= ~ZEND_ACC_CLOSURE;
 
 	if (flags & ZEND_ACC_STATIC) {
 		func->common.fn_flags |= ZEND_ACC_STATIC;

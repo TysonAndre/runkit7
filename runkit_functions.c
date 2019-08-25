@@ -378,13 +378,19 @@ static void php_runkit_function_copy_ctor_same_type(zend_function *fe, zend_stri
 			op_array->vars = dupvars;
 		}
 
+		// TODO: Remove ZEND_ACC_IMMUTABLE from func.common.fn_flags, like php 7.4?
+		// TODO: Look into other php 7.4 changes required for d57cd36e47b627dee5b825760163f8e62e23ab28
+
 		if (op_array->static_variables) {
-			// Similar to zend_compile.c's zend_create_closure copying static variables, zend_compile.c's do_bind_function
+			// Similar to zend_closures.c's zend_create_closure copying static variables, zend_compile.c's do_bind_function
 			// TODO: Does that work with references?
 			// 979: This seems to be calling an internal function returning a reference, then crashing?
 			// ZEND_ASSERT((call->func->common.fn_flags & ZEND_ACC_RETURN_REFERENCE)
 			// 	? Z_ISREF_P(ret) : !Z_ISREF_P(ret));
 			op_array->static_variables = zend_array_dup(op_array->static_variables);
+#if PHP_VERSION_ID >= 70400
+			ZEND_MAP_PTR_INIT(op_array->static_variables_ptr, &(op_array->static_variables));
+#endif
 		}
 
 		if (RUNKIT_RUN_TIME_CACHE(op_array)) {
