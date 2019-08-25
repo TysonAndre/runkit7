@@ -477,6 +477,13 @@ void php_runkit_error_cb(int type, const char *error_filename, const uint error_
 */
 /* }}} */
 
+// Handle change to zend_build_delayed_early_binding_list in php 7.4
+#if PHP_VERSION_ID >= 70400
+#ifndef ZEND_DECLARE_INHERITED_CLASS_DELAYED
+#define ZEND_DECLARE_INHERITED_CLASS_DELAYED ZEND_DECLARE_CLASS_DELAYED
+#endif
+#endif
+
 uint32_t compute_early_binding_opline_num(const zend_op_array *op_array) /* {{{ */
 {
 #if PHP_VERSION_ID < 70300
@@ -606,7 +613,7 @@ PHP_FUNCTION(runkit7_import)
 			// TODO: Check if this is the same in php 7.0
             if (pce != NULL) {
 #if PHP_VERSION_ID >= 70400
-                do_bind_class(key, pce);
+                do_bind_class(key, Z_STR_P(parent_name));
 #else
                 do_bind_inherited_class(new_op_array, &new_op_array->opcodes[opline_num], tmp_class_table, pce, 0);
 #endif
